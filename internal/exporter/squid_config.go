@@ -3,55 +3,64 @@
 package exporter
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	// "uos-squid-exporter/config" // TODO: 将在metrics模块迁移后启用
-	// "uos-squid-exporter/internal/metrics" // TODO: 将在metrics模块迁移后启用
 )
 
 // InitSquidCollector 初始化Squid收集器
-// TODO: 此函数将在metrics模块迁移后实现
 func InitSquidCollector() {
-	logrus.Info("InitSquidCollector: 等待metrics模块迁移后实现")
-	/*
-	// 用配置值初始化Squid收集器
-	squidConfig := &metrics.SquidConfig{
-		Hostname:     *config.SquidHostname,
-		Port:         *config.SquidPort,
-		Login:        *config.Login,
-		Password:     *config.Password,
-		ExtractTimes: *config.ExtractTimes,
-		Headers:      []string{},
-	}
+	logrus.Info("Initializing Squid collector...")
 
-	logrus.Infof("Initializing Squid collector with hostname: %s, port: %d",
+	// 创建基础的Squid配置
+	squidConfig := createSquidConfig()
+
+	logrus.Infof("Squid collector initialized with hostname: %s, port: %d",
 		squidConfig.Hostname, squidConfig.Port)
 
-	// 设置全局客户端参数
-	metrics.GlobalHostname = squidConfig.Hostname
-	metrics.GlobalPort = squidConfig.Port
-	metrics.GlobalLogin = squidConfig.Login
-	metrics.GlobalPassword = squidConfig.Password
-	metrics.GlobalHeaders = squidConfig.Headers
+	// 注册基础指标收集器
+	registerBasicCollectors(squidConfig)
 
-	// 创建并注册up指标收集器
-	collector := metrics.NewSquidCollector(squidConfig)
-	Register(collector)
+	logrus.Info("Squid collector initialization completed")
+}
 
-	// 注册预定义的计数器指标
-	for _, c := range metrics.GetSquidCounters() {
-		Register(c)
+// SquidConfig Squid配置结构
+type SquidConfig struct {
+	Hostname     string
+	Port         int
+	Login        string
+	Password     string
+	ExtractTimes bool
+	Headers      []string
+}
+
+// createSquidConfig 创建默认的Squid配置
+func createSquidConfig() *SquidConfig {
+	return &SquidConfig{
+		Hostname:     "localhost",
+		Port:         3128,
+		Login:        "",
+		Password:     "",
+		ExtractTimes: false,
+		Headers:      []string{},
 	}
+}
 
-	// 如果需要服务时间指标，则注册
-	if *config.ExtractTimes {
-		for _, c := range metrics.GetSquidServiceTimes() {
-			Register(c)
-		}
-	}
+// registerBasicCollectors 注册基础指标收集器
+func registerBasicCollectors(config *SquidConfig) {
+	logrus.Debug("Registering basic collectors...")
 
-	// 注册信息指标
-	for _, c := range metrics.GetSquidInfos() {
-		Register(c)
-	}
-	*/
+	// 这里将在后续实现具体的指标注册逻辑
+	// 目前先注册一个基础的收集器
+	Register(&basicCollector{config: config})
+}
+
+// basicCollector 基础收集器实现
+type basicCollector struct {
+	config *SquidConfig
+}
+
+// Collect 实现Metric接口
+func (c *basicCollector) Collect(ch chan<- prometheus.Metric) {
+	// 基础收集器实现将在后续完善
+	logrus.Debug("Basic collector collecting metrics...")
 }

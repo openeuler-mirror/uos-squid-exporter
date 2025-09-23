@@ -50,7 +50,6 @@ func (r *Registry) Describe(descs chan<- *prometheus.Desc) {
 func (r *Registry) Collect(ch chan<- prometheus.Metric) {
 	metrics := r.GetMetrics()
 	for _, m := range metrics {
-		// 添加调试日志以确认 Collect 方法被调用
 		m.Collect(ch)
 	}
 }
