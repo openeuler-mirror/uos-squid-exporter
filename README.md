@@ -1,18 +1,7 @@
 # UOS Squid Exporter for Prometheus
-
-基于深度操作系统（UOS）的 Squid 性能监控导出器，用于将 Squid 代理服务器指标导出到 Prometheus。
-
 ## 项目简介
 
-UOS Squid Exporter 是一个专门为深度操作系统（UOS）开发的 Squid 代理服务器监控工具。它连接到 Squid 代理服务器，收集性能指标并以 Prometheus 格式导出，包括客户端和服务器 HTTP 统计信息、缓存性能、服务时间和各种系统资源使用指标。
-
-## 功能特性
-
-- 🚀 **全面的指标收集**: 支持客户端/服务器 HTTP 指标、缓存性能、服务时间等
-- 📊 **Prometheus 兼容**: 原生支持 Prometheus 监控体系
-- 🎯 **UOS 优化**: 专为深度操作系统环境优化
-- ⚡ **高性能**: 低资源占用，高效稳定
-- 🔧 **灵活配置**: 支持命令行参数和 YAML 配置文件
+Squid 代理服务器监控工具。它连接到 Squid 代理服务器，收集性能指标并以 Prometheus 格式导出，包括客户端和服务器 HTTP 统计信息、缓存性能、服务时间和各种系统资源使用指标。
 
 ## 安装
 
