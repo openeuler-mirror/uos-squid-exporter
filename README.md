@@ -120,15 +120,3 @@ scrape_configs:
 acl prometheus src 127.0.0.1
 http_access allow manager prometheus
 ```
-
-## 参与贡献
-
-1. Fork 本仓库
-2. 新建 feature 分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交修改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 提交 Pull Request
-
-## 许可证
-
-[Apache License 2.0](LICENSE)
