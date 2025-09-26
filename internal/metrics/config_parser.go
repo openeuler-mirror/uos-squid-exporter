@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -116,5 +117,69 @@ func (p *SquidConfigParser) parseLine(line string, config *SquidConfigData) erro
 		return p.parseRefreshPattern(line, config)
 	}
 
+	return nil
+}
+
+// parseACL 解析ACL定义
+func (p *SquidConfigParser) parseACL(line string, config *SquidConfigData) error {
+	parts := strings.Fields(line)
+	if len(parts) < 3 {
+		return fmt.Errorf("invalid ACL format: %s", line)
+	}
+
+	acl := ACL{
+		Name: parts[1],
+		Type: parts[2],
+	}
+
+	// 处理值部分
+	if len(parts) > 3 {
+		valueParts := parts[3:]
+		// 移除注释部分
+		for i, part := range valueParts {
+			if strings.HasPrefix(part, "#") {
+				valueParts = valueParts[:i]
+				break
+			}
+		}
+		acl.Value = strings.Join(valueParts, " ")
+	}
+
+	// 检查是否是本地网络ACL
+	if acl.Name == "localnet" && acl.Type == "src" {
+		config.LocalNetworks = append(config.LocalNetworks, acl.Value)
+	}
+
+	// 检查是否是安全端口ACL
+	if acl.Name == "Safe_ports" && acl.Type == "port" {
+		if ports, err := p.parsePorts(acl.Value); err == nil {
+			config.SafePorts = append(config.SafePorts, ports...)
+		}
+	}
+
+	// 检查是否是SSL端口ACL
+	if acl.Name == "SSL_ports" && acl.Type == "port" {
+		if ports, err := p.parsePorts(acl.Value); err == nil {
+			config.SSLPorts = append(config.SSLPorts, ports...)
+		}
+	}
+
+	config.ACLs = append(config.ACLs, acl)
+	return nil
+}
+
+// parseHttpPort 解析http_port配置
+func (p *SquidConfigParser) parseHttpPort(line string, config *SquidConfigData) error {
+	parts := strings.Fields(line)
+	if len(parts) < 2 {
+		return fmt.Errorf("invalid http_port format: %s", line)
+	}
+
+	port, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return fmt.Errorf("invalid port number: %s", parts[1])
+	}
+
+	config.HttpPort = port
 	return nil
 }
