@@ -83,3 +83,38 @@ func (p *SquidConfigParser) Parse() (*SquidConfigData, error) {
 
 	return config, nil
 }
+
+// parseLine 解析单行配置
+func (p *SquidConfigParser) parseLine(line string, config *SquidConfigData) error {
+	// 解析ACL定义
+	if strings.HasPrefix(line, "acl ") {
+		return p.parseACL(line, config)
+	}
+
+	// 解析http_port
+	if strings.HasPrefix(line, "http_port ") {
+		return p.parseHttpPort(line, config)
+	}
+
+	// 解析cache_dir
+	if strings.HasPrefix(line, "cache_dir ") {
+		return p.parseCacheDir(line, config)
+	}
+
+	// 解析coredump_dir
+	if strings.HasPrefix(line, "coredump_dir ") {
+		return p.parseCoreDumpDir(line, config)
+	}
+
+	// 解析http_access
+	if strings.HasPrefix(line, "http_access ") {
+		return p.parseHttpAccess(line, config)
+	}
+
+	// 解析refresh_pattern
+	if strings.HasPrefix(line, "refresh_pattern ") {
+		return p.parseRefreshPattern(line, config)
+	}
+
+	return nil
+}
