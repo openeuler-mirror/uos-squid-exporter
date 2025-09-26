@@ -183,3 +183,70 @@ func (p *SquidConfigParser) parseHttpPort(line string, config *SquidConfigData) 
 	config.HttpPort = port
 	return nil
 }
+
+// parseCacheDir 解析cache_dir配置
+func (p *SquidConfigParser) parseCacheDir(line string, config *SquidConfigData) error {
+	parts := strings.Fields(line)
+	if len(parts) >= 2 {
+		// 保存完整的cache_dir配置
+		config.CacheDir = strings.Join(parts[1:], " ")
+	}
+	return nil
+}
+
+// parseCoreDumpDir 解析coredump_dir配置
+func (p *SquidConfigParser) parseCoreDumpDir(line string, config *SquidConfigData) error {
+	parts := strings.Fields(line)
+	if len(parts) >= 2 {
+		config.CoreDumpDir = parts[1]
+	}
+	return nil
+}
+
+// parseHttpAccess 解析http_access配置
+func (p *SquidConfigParser) parseHttpAccess(line string, config *SquidConfigData) error {
+	config.AccessRules = append(config.AccessRules, line)
+	return nil
+}
+
+// parseRefreshPattern 解析refresh_pattern配置
+func (p *SquidConfigParser) parseRefreshPattern(line string, config *SquidConfigData) error {
+	config.RefreshPatterns = append(config.RefreshPatterns, line)
+	return nil
+}
+
+// parsePorts 解析端口配置，支持单个端口和端口范围
+func (p *SquidConfigParser) parsePorts(portStr string) ([]int, error) {
+	var ports []int
+
+	// 检查是否是端口范围 (如 1025-65535)
+	if strings.Contains(portStr, "-") {
+		parts := strings.Split(portStr, "-")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid port range format: %s", portStr)
+		}
+
+		start, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+		if err != nil {
+			return nil, fmt.Errorf("invalid start port: %s", parts[0])
+		}
+
+		end, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+		if err != nil {
+			return nil, fmt.Errorf("invalid end port: %s", parts[1])
+		}
+
+		for i := start; i <= end; i++ {
+			ports = append(ports, i)
+		}
+	} else {
+		// 单个端口
+		port, err := strconv.Atoi(strings.TrimSpace(portStr))
+		if err != nil {
+			return nil, fmt.Errorf("invalid port: %s", portStr)
+		}
+		ports = append(ports, port)
+	}
+
+	return ports, nil
+}
