@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: MIT
 package metrics
 
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+)
+
 // SquidConfigData 表示解析后的squid配置数据
 type SquidConfigData struct {
 	HttpPort        int      `json:"http_port"`
@@ -33,4 +40,46 @@ func NewSquidConfigParser(filePath string) *SquidConfigParser {
 	return &SquidConfigParser{
 		filePath: filePath,
 	}
+}
+
+// Parse 解析squid配置文件
+func (p *SquidConfigParser) Parse() (*SquidConfigData, error) {
+	file, err := os.Open(p.filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open config file %s: %w", p.filePath, err)
+	}
+	defer file.Close()
+
+	config := &SquidConfigData{
+		LocalNetworks:   make([]string, 0),
+		SafePorts:       make([]int, 0),
+		SSLPorts:        make([]int, 0),
+		AccessRules:     make([]string, 0),
+		RefreshPatterns: make([]string, 0),
+		ACLs:            make([]ACL, 0),
+	}
+
+	scanner := bufio.NewScanner(file)
+	lineNumber := 0
+
+	for scanner.Scan() {
+		lineNumber++
+		line := strings.TrimSpace(scanner.Text())
+
+		// 跳过空行和注释
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// 解析配置项
+		if err := p.parseLine(line, config); err != nil {
+			return nil, fmt.Errorf("error parsing line %d: %w", lineNumber, err)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading config file: %w", err)
+	}
+
+	return config, nil
 }
