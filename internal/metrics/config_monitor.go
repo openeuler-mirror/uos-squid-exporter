@@ -5,6 +5,8 @@ package metrics
 import (
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ConfigFileMonitor 配置文件监控器
@@ -26,4 +28,31 @@ func NewConfigFileMonitor(configPath string) *ConfigFileMonitor {
 		stopChannel:    make(chan struct{}),
 		running:        false,
 	}
+}
+
+// Start 启动配置文件监控
+func (m *ConfigFileMonitor) Start(interval time.Duration) {
+	if m.running {
+		return
+	}
+
+	m.running = true
+	go m.monitorLoop(interval)
+	logrus.Infof("Config file monitor started for: %s", m.configPath)
+}
+
+// Stop 停止配置文件监控
+func (m *ConfigFileMonitor) Stop() {
+	if !m.running {
+		return
+	}
+
+	close(m.stopChannel)
+	m.running = false
+	logrus.Info("Config file monitor stopped")
+}
+
+// GetRefreshChannel 获取刷新通道
+func (m *ConfigFileMonitor) GetRefreshChannel() <-chan struct{} {
+	return m.refreshChannel
 }
