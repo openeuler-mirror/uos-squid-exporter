@@ -3,9 +3,12 @@
 package metrics
 
 import (
+	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 )
 
 // SquidConfigCollector squid配置文件指标收集器
@@ -111,4 +114,92 @@ func NewSquidConfigCollector(configPath string) *SquidConfigCollector {
 	collector.monitor.Start(30 * time.Second) // 每30秒检查一次
 
 	return collector
+}
+
+// Collect 实现prometheus.Collector接口
+func (c *SquidConfigCollector) Collect(ch chan<- prometheus.Metric) {
+	// 解析配置文件
+	configData, err := c.parser.Parse()
+	if err != nil {
+		logrus.Errorf("Failed to parse squid config file %s: %v", c.configPath, err)
+		c.configUp.Set(0)
+		ch <- c.configUp
+		return
+	}
+
+	c.configData = configData
+
+	// 验证配置
+	if err := configData.Validate(); err != nil {
+		logrus.Errorf("Squid config validation failed: %v", err)
+		c.configData = nil // 验证失败时清空配置数据
+		c.configUp.Set(0)
+		ch <- c.configUp
+		return
+	}
+
+	// 设置配置可用性指标
+	c.configUp.Set(1)
+
+	// 设置HTTP端口指标
+	c.httpPort.Set(float64(configData.HttpPort))
+
+	// 检查缓存目录是否存在
+	cacheDirExists := 0.0
+	if configData.CacheDir != "" {
+		// 提取缓存目录路径（去掉ufs等参数）
+		cacheDirPath := extractCacheDirPath(configData.CacheDir)
+		if cacheDirPath != "" && dirExists(cacheDirPath) {
+			cacheDirExists = 1.0
+		}
+	}
+	c.cacheDirExists.Set(cacheDirExists)
+
+	// 检查核心转储目录是否存在
+	coredumpDirExists := 0.0
+	if configData.CoreDumpDir != "" && dirExists(configData.CoreDumpDir) {
+		coredumpDirExists = 1.0
+	}
+	c.coredumpDirExists.Set(coredumpDirExists)
+
+	// 设置计数指标
+	c.localNetworks.Set(float64(len(configData.LocalNetworks)))
+	c.safePorts.Set(float64(len(configData.SafePorts)))
+	c.sslPorts.Set(float64(len(configData.SSLPorts)))
+	c.accessRules.Set(float64(len(configData.AccessRules)))
+	c.refreshPatterns.Set(float64(len(configData.RefreshPatterns)))
+	c.acls.Set(float64(len(configData.ACLs)))
+
+	// 发送所有指标
+	ch <- c.configUp
+	ch <- c.httpPort
+	ch <- c.cacheDirExists
+	ch <- c.coredumpDirExists
+	ch <- c.localNetworks
+	ch <- c.safePorts
+	ch <- c.sslPorts
+	ch <- c.accessRules
+	ch <- c.refreshPatterns
+	ch <- c.acls
+
+	// 发送配置摘要指标
+	configFile := filepath.Base(c.configPath)
+	cacheDir := configData.CacheDir
+	if cacheDir == "" {
+		cacheDir = "not_configured"
+	}
+	coredumpDir := configData.CoreDumpDir
+	if coredumpDir == "" {
+		coredumpDir = "not_configured"
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.configSummary,
+		prometheus.GaugeValue,
+		1.0,
+		configFile,
+		strconv.Itoa(configData.HttpPort),
+		cacheDir,
+		coredumpDir,
+	)
 }
