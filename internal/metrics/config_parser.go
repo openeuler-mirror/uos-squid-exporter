@@ -267,3 +267,18 @@ func (config *SquidConfigData) Validate() error {
 
 	return nil
 }
+
+// GetConfigSummary 获取配置摘要信息
+func (config *SquidConfigData) GetConfigSummary() map[string]interface{} {
+	return map[string]interface{}{
+		"http_port":        config.HttpPort,
+		"cache_dir":        config.CacheDir,
+		"coredump_dir":     config.CoreDumpDir,
+		"local_networks":   len(config.LocalNetworks),
+		"safe_ports":       len(config.SafePorts),
+		"ssl_ports":        len(config.SSLPorts),
+		"access_rules":     len(config.AccessRules),
+		"refresh_patterns": len(config.RefreshPatterns),
+		"acls":             len(config.ACLs),
+	}
+}
