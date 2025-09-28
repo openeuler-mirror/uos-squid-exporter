@@ -3,6 +3,7 @@
 package metrics
 
 import (
+	"os"
 	"sync"
 	"time"
 
@@ -55,4 +56,50 @@ func (m *ConfigFileMonitor) Stop() {
 // GetRefreshChannel 获取刷新通道
 func (m *ConfigFileMonitor) GetRefreshChannel() <-chan struct{} {
 	return m.refreshChannel
+}
+
+// monitorLoop 监控循环
+func (m *ConfigFileMonitor) monitorLoop(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	// 初始化文件状态
+	m.updateFileState()
+
+	for {
+		select {
+		case <-ticker.C:
+			if m.checkFileChanged() {
+				logrus.Infof("Config file changed: %s", m.configPath)
+				select {
+				case m.refreshChannel <- struct{}{}:
+				default:
+					// 通道已满，跳过本次通知
+				}
+			}
+		case <-m.stopChannel:
+			return
+		}
+	}
+}
+
+// checkFileChanged 检查文件是否发生变化
+func (m *ConfigFileMonitor) checkFileChanged() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	info, err := os.Stat(m.configPath)
+	if err != nil {
+		logrus.Warnf("Failed to stat config file %s: %v", m.configPath, err)
+		return false
+	}
+
+	// 检查修改时间和文件大小
+	if !info.ModTime().Equal(m.lastModTime) || info.Size() != m.lastSize {
+		m.lastModTime = info.ModTime()
+		m.lastSize = info.Size()
+		return true
+	}
+
+	return false
 }
