@@ -51,3 +51,39 @@ func TestConfigFileMonitor_StartStop(t *testing.T) {
 		t.Error("Expected monitor to not be running after Stop()")
 	}
 }
+
+func TestConfigFileMonitor_FileChangeDetection(t *testing.T) {
+	// 创建临时文件
+	tmpFile, err := os.CreateTemp("", "squid_monitor_change_test.conf")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	tmpFile.Close()
+
+	monitor := NewConfigFileMonitor(tmpFile.Name())
+
+	// 启动监控
+	monitor.Start(50 * time.Millisecond) // 50ms检查间隔
+	defer monitor.Stop()
+
+	// 获取刷新通道
+	refreshCh := monitor.GetRefreshChannel()
+
+	// 等待初始状态稳定
+	time.Sleep(100 * time.Millisecond)
+
+	// 修改文件
+	err = os.WriteFile(tmpFile.Name(), []byte("test content"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write to temp file: %v", err)
+	}
+
+	// 等待检测到变化
+	select {
+	case <-refreshCh:
+		// 成功检测到变化
+	case <-time.After(200 * time.Millisecond):
+		t.Error("Expected to detect file change within 200ms")
+	}
+}
