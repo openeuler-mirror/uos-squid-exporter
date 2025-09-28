@@ -250,3 +250,20 @@ func (p *SquidConfigParser) parsePorts(portStr string) ([]int, error) {
 
 	return ports, nil
 }
+
+// Validate 验证解析后的配置数据
+func (config *SquidConfigData) Validate() error {
+	if config.HttpPort <= 0 || config.HttpPort > 65535 {
+		return fmt.Errorf("invalid http_port: %d", config.HttpPort)
+	}
+
+	if len(config.LocalNetworks) == 0 {
+		return fmt.Errorf("no local networks defined")
+	}
+
+	if len(config.SafePorts) == 0 {
+		return fmt.Errorf("no safe ports defined")
+	}
+
+	return nil
+}
