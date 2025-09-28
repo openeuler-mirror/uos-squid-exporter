@@ -87,3 +87,53 @@ func TestConfigFileMonitor_FileChangeDetection(t *testing.T) {
 		t.Error("Expected to detect file change within 200ms")
 	}
 }
+
+func TestConfigFileMonitor_GetFileInfo(t *testing.T) {
+	// 创建临时文件
+	tmpFile, err := os.CreateTemp("", "squid_monitor_info_test.conf")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	// 写入一些内容
+	content := "test content for file info"
+	_, err = tmpFile.WriteString(content)
+	if err != nil {
+		t.Fatalf("Failed to write to temp file: %v", err)
+	}
+	tmpFile.Close()
+
+	monitor := NewConfigFileMonitor(tmpFile.Name())
+
+	// 获取文件信息
+	modTime, size, err := monitor.GetFileInfo()
+	if err != nil {
+		t.Fatalf("Failed to get file info: %v", err)
+	}
+
+	if size != int64(len(content)) {
+		t.Errorf("Expected size %d, got %d", len(content), size)
+	}
+
+	if modTime.IsZero() {
+		t.Error("Expected modification time to not be zero")
+	}
+}
+
+func TestConfigFileMonitor_NonExistentFile(t *testing.T) {
+	monitor := NewConfigFileMonitor("/nonexistent/file.conf")
+
+	// 获取文件信息应该返回错误
+	_, _, err := monitor.GetFileInfo()
+	if err == nil {
+		t.Error("Expected error for non-existent file")
+	}
+
+	// 启动监控应该不会panic
+	monitor.Start(100 * time.Millisecond)
+	defer monitor.Stop()
+
+	// 等待一段时间确保没有panic
+	time.Sleep(200 * time.Millisecond)
+}
