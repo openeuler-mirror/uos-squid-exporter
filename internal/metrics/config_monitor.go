@@ -131,3 +131,10 @@ func (m *ConfigFileMonitor) GetFileInfo() (modTime time.Time, size int64, err er
 
 	return info.ModTime(), info.Size(), nil
 }
+
+// IsRunning 检查监控器是否正在运行
+func (m *ConfigFileMonitor) IsRunning() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.running
+}
