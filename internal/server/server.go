@@ -7,12 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/alecthomas/kingpin"
-	"github.com/dustin/go-humanize"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 	"net/http"
 	"os"
 	"sync"
@@ -23,6 +17,13 @@ import (
 	"uos-squid-exporter/pkg/logger"
 	"uos-squid-exporter/pkg/ratelimit"
 	"uos-squid-exporter/pkg/utils"
+
+	"github.com/alecthomas/kingpin"
+	"github.com/dustin/go-humanize"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 var defaultSeverVersion = "1.0.0"
@@ -77,7 +78,11 @@ func (s *Server) SetUp() error {
 	}
 
 	// 初始化Squid收集器
-	exporter.InitSquidCollector()
+	squidConfigPath := s.CommonConfig.SquidConfigPath
+	if squidConfigPath == "" {
+		squidConfigPath = "/etc/squid/squid.conf" // 默认路径
+	}
+	exporter.InitSquidCollector(squidConfigPath)
 
 	err = s.setupHttpServer()
 	if err != nil {
@@ -93,6 +98,13 @@ func (s *Server) SetUp() error {
 		logrus.Info("Using command-line parameters to override configuration parameters")
 		s.ExporterConfig.ScrapeUri = *config.ScrapeUrl
 	}
+
+	// 处理squid配置文件路径命令行参数
+	if exporter.SquidConfigPath != nil && *exporter.SquidConfigPath != "" {
+		logrus.Infof("Using command-line squid config path: %s", *exporter.SquidConfigPath)
+		s.CommonConfig.SquidConfigPath = *exporter.SquidConfigPath
+	}
+
 	return nil
 }
 
