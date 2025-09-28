@@ -3,6 +3,7 @@
 package metrics
 
 import (
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -228,4 +229,45 @@ func extractCacheDirPath(cacheDirConfig string) string {
 		return parts[1]
 	}
 	return ""
+}
+
+// dirExists 检查目录是否存在
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return info.IsDir()
+}
+
+// GetConfigData 获取当前解析的配置数据
+func (c *SquidConfigCollector) GetConfigData() *SquidConfigData {
+	return c.configData
+}
+
+// GetConfigPath 获取配置文件路径
+func (c *SquidConfigCollector) GetConfigPath() string {
+	return c.configPath
+}
+
+// Refresh 刷新配置数据
+func (c *SquidConfigCollector) Refresh() error {
+	configData, err := c.parser.Parse()
+	if err != nil {
+		return err
+	}
+
+	if err := configData.Validate(); err != nil {
+		return err
+	}
+
+	c.configData = configData
+	return nil
+}
+
+// Stop 停止收集器和监控
+func (c *SquidConfigCollector) Stop() {
+	if c.monitor != nil {
+		c.monitor.Stop()
+	}
 }
