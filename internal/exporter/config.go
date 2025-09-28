@@ -3,26 +3,29 @@
 package exporter
 
 import (
-	"github.com/alecthomas/kingpin"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 	"os"
 	"time"
 	"uos-squid-exporter/pkg/logger"
 	"uos-squid-exporter/pkg/utils"
+
+	"github.com/alecthomas/kingpin"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 var (
-	Configfile    *string
-	DefaultConfig = Config{
+	Configfile      *string
+	SquidConfigPath *string
+	DefaultConfig   = Config{
 		Logging: logger.Config{
 			Level:   "debug",
 			LogPath: "/var/log/uos-exporter/squid_exporter.log",
 			MaxSize: "10MB",
 			MaxAge:  time.Hour * 24 * 7},
-		Address:     "127.0.0.1",
-		Port:        8080,
-		MetricsPath: "/metrics",
+		Address:         "127.0.0.1",
+		Port:            8080,
+		MetricsPath:     "/metrics",
+		SquidConfigPath: "/etc/squid/squid.conf",
 	}
 )
 
@@ -31,13 +34,18 @@ func init() {
 		Short('c').
 		Default("/etc/uos-exporter/squid-exporter.yaml").
 		String()
+
+	SquidConfigPath = kingpin.Flag("squid-config", "Path to squid configuration file").
+		Default("/etc/squid/squid.conf").
+		String()
 }
 
 type Config struct {
-	Logging     logger.Config `yaml:"log"`
-	Address     string        `yaml:"address"`
-	Port        int           `yaml:"port"`
-	MetricsPath string        `yaml:"metricsPath"`
+	Logging         logger.Config `yaml:"log"`
+	Address         string        `yaml:"address"`
+	Port            int           `yaml:"port"`
+	MetricsPath     string        `yaml:"metricsPath"`
+	SquidConfigPath string        `yaml:"squidConfigPath"`
 }
 
 func Unpack(config interface{}) error {
