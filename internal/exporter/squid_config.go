@@ -3,12 +3,13 @@
 package exporter
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
+	"uos-squid-exporter/internal/metrics"
+
 	"github.com/sirupsen/logrus"
 )
 
 // InitSquidCollector 初始化Squid收集器
-func InitSquidCollector() {
+func InitSquidCollector(squidConfigPath string) {
 	logrus.Info("Initializing Squid collector...")
 
 	// 创建基础的Squid配置
@@ -19,6 +20,9 @@ func InitSquidCollector() {
 
 	// 注册基础指标收集器
 	registerBasicCollectors(squidConfig)
+
+	// 注册配置文件收集器
+	registerConfigCollector(squidConfigPath)
 
 	logrus.Info("Squid collector initialization completed")
 }
@@ -40,7 +44,7 @@ func createSquidConfig() *SquidConfig {
 		Port:         3128,
 		Login:        "",
 		Password:     "",
-		ExtractTimes: false,
+		ExtractTimes: true, // 默认启用服务时间提取
 		Headers:      []string{},
 	}
 }
@@ -49,18 +53,39 @@ func createSquidConfig() *SquidConfig {
 func registerBasicCollectors(config *SquidConfig) {
 	logrus.Debug("Registering basic collectors...")
 
-	// 这里将在后续实现具体的指标注册逻辑
-	// 目前先注册一个基础的收集器
-	Register(&basicCollector{config: config})
-}
+	// 注册主要的Squid指标收集器
+	mainCollector := metrics.NewSquidCollector(&metrics.SquidConfig{
+		Hostname:     config.Hostname,
+		Port:         config.Port,
+		Login:        config.Login,
+		Password:     config.Password,
+		Headers:      config.Headers,
+		ExtractTimes: config.ExtractTimes,
+	})
+	Register(mainCollector)
 
-// basicCollector 基础收集器实现
-type basicCollector struct {
-	config *SquidConfig
-}
+	// 注册Squid计数器指标
+	counters := metrics.GetSquidCounters()
+	for _, counter := range counters {
+		Register(counter)
+	}
+	logrus.Debugf("Registered %d squid counter collectors", len(counters))
 
-// Collect 实现Metric接口
-func (c *basicCollector) Collect(ch chan<- prometheus.Metric) {
-	// 基础收集器实现将在后续完善
-	logrus.Debug("Basic collector collecting metrics...")
+	// 注册Squid信息指标
+	infos := metrics.GetSquidInfos()
+	for _, info := range infos {
+		Register(info)
+	}
+	logrus.Debugf("Registered %d squid info collectors", len(infos))
+
+	// 如果启用了服务时间提取，注册服务时间指标
+	if config.ExtractTimes {
+		serviceTimes := metrics.GetSquidServiceTimes()
+		for _, serviceTime := range serviceTimes {
+			Register(serviceTime)
+		}
+		logrus.Debugf("Registered %d squid service time collectors", len(serviceTimes))
+	}
+
+	logrus.Info("Basic collectors registration completed")
 }
