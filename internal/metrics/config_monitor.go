@@ -103,3 +103,31 @@ func (m *ConfigFileMonitor) checkFileChanged() bool {
 
 	return false
 }
+
+// updateFileState 更新文件状态
+func (m *ConfigFileMonitor) updateFileState() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	info, err := os.Stat(m.configPath)
+	if err != nil {
+		logrus.Warnf("Failed to stat config file %s: %v", m.configPath, err)
+		return
+	}
+
+	m.lastModTime = info.ModTime()
+	m.lastSize = info.Size()
+}
+
+// GetFileInfo 获取文件信息
+func (m *ConfigFileMonitor) GetFileInfo() (modTime time.Time, size int64, err error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	info, err := os.Stat(m.configPath)
+	if err != nil {
+		return time.Time{}, 0, err
+	}
+
+	return info.ModTime(), info.Size(), nil
+}
