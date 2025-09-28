@@ -5,6 +5,7 @@ package metrics
 import (
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -116,6 +117,21 @@ func NewSquidConfigCollector(configPath string) *SquidConfigCollector {
 	return collector
 }
 
+// Describe 实现prometheus.Collector接口
+func (c *SquidConfigCollector) Describe(ch chan<- *prometheus.Desc) {
+	c.configUp.Describe(ch)
+	c.httpPort.Describe(ch)
+	c.cacheDirExists.Describe(ch)
+	c.coredumpDirExists.Describe(ch)
+	c.localNetworks.Describe(ch)
+	c.safePorts.Describe(ch)
+	c.sslPorts.Describe(ch)
+	c.accessRules.Describe(ch)
+	c.refreshPatterns.Describe(ch)
+	c.acls.Describe(ch)
+	ch <- c.configSummary
+}
+
 // Collect 实现prometheus.Collector接口
 func (c *SquidConfigCollector) Collect(ch chan<- prometheus.Metric) {
 	// 解析配置文件
@@ -202,4 +218,14 @@ func (c *SquidConfigCollector) Collect(ch chan<- prometheus.Metric) {
 		cacheDir,
 		coredumpDir,
 	)
+}
+
+// extractCacheDirPath 从cache_dir配置中提取目录路径
+func extractCacheDirPath(cacheDirConfig string) string {
+	// cache_dir格式通常是: ufs /path/to/dir size dirs subdirs
+	parts := strings.Fields(cacheDirConfig)
+	if len(parts) >= 2 {
+		return parts[1]
+	}
+	return ""
 }
