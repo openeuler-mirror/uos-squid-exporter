@@ -89,3 +89,16 @@ func registerBasicCollectors(config *SquidConfig) {
 
 	logrus.Info("Basic collectors registration completed")
 }
+
+// registerConfigCollector 注册配置文件收集器
+func registerConfigCollector(configPath string) {
+	logrus.Debugf("Registering config collector for path: %s", configPath)
+
+	// 创建配置文件收集器
+	configCollector := metrics.NewSquidConfigCollector(configPath)
+
+	// 注册到Prometheus注册表
+	Register(configCollector)
+
+	logrus.Infof("Config collector registered successfully for: %s", configPath)
+}
