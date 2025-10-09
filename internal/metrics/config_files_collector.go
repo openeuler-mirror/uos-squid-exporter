@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 )
 
 // ConfigFileInfo 表示配置文件的详细信息
@@ -98,4 +99,80 @@ func (c *SquidConfigFilesCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.fileInfo
 	ch <- c.fileTypesCount
 	ch <- c.recentlyChanged
+}
+
+// Collect 实现prometheus.Collector接口
+func (c *SquidConfigFilesCollector) Collect(ch chan<- prometheus.Metric) {
+	// 扫描配置目录
+	files, err := c.scanConfigDirectory()
+	if err != nil {
+		logrus.Errorf("Failed to scan squid config directory %s: %v", c.configDir, err)
+		c.scanSuccess.Set(0)
+		ch <- c.scanSuccess
+		return
+	}
+
+	// 设置扫描成功指标
+	c.scanSuccess.Set(1)
+	c.lastScanTime.Set(float64(time.Now().Unix()))
+
+	// 计算统计信息
+	var totalSize int64
+	extensionCount := make(map[string]int)
+	var recentlyChangedCount int
+
+	// 设置文件信息指标
+	for _, file := range files {
+		totalSize += file.Size
+
+		// 统计文件类型
+		if file.Extension != "" {
+			extensionCount[file.Extension]++
+		} else {
+			extensionCount["none"]++
+		}
+
+		// 检查最近修改的文件（1小时内）
+		if time.Since(file.ModTime) <= time.Hour {
+			recentlyChangedCount++
+		}
+
+		// 发送文件信息指标
+		ch <- prometheus.MustNewConstMetric(
+			c.fileInfo,
+			prometheus.GaugeValue,
+			float64(file.Size),
+			file.Name,
+			file.Path,
+			file.Extension,
+			file.Permissions,
+		)
+	}
+
+	// 设置基础指标
+	c.filesCount.Set(float64(len(files)))
+	c.totalSize.Set(float64(totalSize))
+
+	// 发送基础指标
+	ch <- c.filesCount
+	ch <- c.totalSize
+	ch <- c.lastScanTime
+	ch <- c.scanSuccess
+
+	// 发送文件类型统计指标
+	for extension, count := range extensionCount {
+		ch <- prometheus.MustNewConstMetric(
+			c.fileTypesCount,
+			prometheus.GaugeValue,
+			float64(count),
+			extension,
+		)
+	}
+
+	// 发送最近修改文件数量指标
+	ch <- prometheus.MustNewConstMetric(
+		c.recentlyChanged,
+		prometheus.GaugeValue,
+		float64(recentlyChangedCount),
+	)
 }
