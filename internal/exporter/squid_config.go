@@ -24,6 +24,9 @@ func InitSquidCollector(squidConfigPath string) {
 	// 注册配置文件收集器
 	registerConfigCollector(squidConfigPath)
 
+	// 注册配置文件列表收集器
+	registerConfigFilesCollector()
+
 	logrus.Info("Squid collector initialization completed")
 }
 
@@ -101,4 +104,23 @@ func registerConfigCollector(configPath string) {
 	Register(configCollector)
 
 	logrus.Infof("Config collector registered successfully for: %s", configPath)
+}
+
+// registerConfigFilesCollector 注册配置文件列表收集器
+func registerConfigFilesCollector() {
+	configDir := DefaultConfig.SquidConfigDir
+	if SquidConfigDir != nil && *SquidConfigDir != "" {
+		configDir = *SquidConfigDir
+		logrus.Infof("Using command-line squid config directory: %s", configDir)
+	}
+
+	logrus.Debugf("Registering config files collector for directory: %s", configDir)
+
+	// 创建配置文件列表收集器
+	configFilesCollector := metrics.NewSquidConfigFilesCollector(configDir)
+
+	// 注册到Prometheus注册表
+	Register(configFilesCollector)
+
+	logrus.Infof("Config files collector registered successfully for directory: %s", configDir)
 }
