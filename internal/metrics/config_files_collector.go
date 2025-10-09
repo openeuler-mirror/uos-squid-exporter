@@ -3,6 +3,9 @@
 package metrics
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -175,4 +178,49 @@ func (c *SquidConfigFilesCollector) Collect(ch chan<- prometheus.Metric) {
 		prometheus.GaugeValue,
 		float64(recentlyChangedCount),
 	)
+}
+
+// scanConfigDirectory 扫描配置目录并返回文件信息
+func (c *SquidConfigFilesCollector) scanConfigDirectory() ([]ConfigFileInfo, error) {
+	var files []ConfigFileInfo
+
+	err := filepath.Walk(c.configDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			// 如果无法访问某个文件或目录，记录警告但继续处理其他文件
+			logrus.Warnf("Unable to access %s: %v", path, err)
+			return nil
+		}
+
+		// 跳过目录本身（只处理目录中的文件）
+		if path == c.configDir {
+			return nil
+		}
+
+		// 构建文件信息
+		fileInfo := ConfigFileInfo{
+			Name:        info.Name(),
+			Path:        path,
+			Size:        info.Size(),
+			ModTime:     info.ModTime(),
+			IsDirectory: info.IsDir(),
+			IsRegular:   info.Mode().IsRegular(),
+			Permissions: info.Mode().String(),
+			Extension:   strings.TrimPrefix(filepath.Ext(info.Name()), "."),
+		}
+
+		files = append(files, fileInfo)
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return files, nil
+}
+
+// GetConfigDir 获取配置目录路径
+func (c *SquidConfigFilesCollector) GetConfigDir() string {
+	return c.configDir
 }
