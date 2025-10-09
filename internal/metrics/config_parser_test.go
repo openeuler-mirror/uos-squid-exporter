@@ -175,3 +175,31 @@ func TestSquidConfigData_Validate(t *testing.T) {
 		t.Error("Empty safe ports should fail validation")
 	}
 }
+
+func TestSquidConfigData_GetConfigSummary(t *testing.T) {
+	config := &SquidConfigData{
+		HttpPort:        3128,
+		CacheDir:        "/var/spool/squid",
+		CoreDumpDir:     "/var/spool/squid",
+		LocalNetworks:   []string{"192.168.0.0/16"},
+		SafePorts:       []int{80, 443},
+		SSLPorts:        []int{443},
+		AccessRules:     []string{"http_access allow localhost"},
+		RefreshPatterns: []string{"refresh_pattern . 0 20% 4320"},
+		ACLs:            []ACL{{Name: "localnet", Type: "src", Value: "192.168.0.0/16"}},
+	}
+
+	summary := config.GetConfigSummary()
+
+	if summary["http_port"] != 3128 {
+		t.Errorf("Expected http_port 3128, got %v", summary["http_port"])
+	}
+
+	if summary["local_networks"] != 1 {
+		t.Errorf("Expected 1 local network, got %v", summary["local_networks"])
+	}
+
+	if summary["safe_ports"] != 2 {
+		t.Errorf("Expected 2 safe ports, got %v", summary["safe_ports"])
+	}
+}
