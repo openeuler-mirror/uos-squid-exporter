@@ -33,3 +33,58 @@ type SquidConfigFilesCollector struct {
 	fileTypesCount  *prometheus.Desc
 	recentlyChanged *prometheus.Desc
 }
+
+// NewSquidConfigFilesCollector 创建新的squid配置文件列表收集器
+func NewSquidConfigFilesCollector(configDir string) *SquidConfigFilesCollector {
+	collector := &SquidConfigFilesCollector{
+		configDir: configDir,
+
+		// 初始化Prometheus指标
+		filesCount: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: "squid_config",
+			Name:      "files_count",
+			Help:      "Total number of configuration files in squid config directory",
+		}),
+
+		totalSize: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: "squid_config",
+			Name:      "files_total_size_bytes",
+			Help:      "Total size of all configuration files in bytes",
+		}),
+
+		lastScanTime: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: "squid_config",
+			Name:      "last_scan_timestamp",
+			Help:      "Timestamp of the last successful directory scan",
+		}),
+
+		scanSuccess: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: "squid_config",
+			Name:      "scan_success",
+			Help:      "Whether the last directory scan was successful (1) or not (0)",
+		}),
+
+		fileInfo: prometheus.NewDesc(
+			"squid_config_file_info",
+			"Information about squid configuration files",
+			[]string{"file_name", "file_path", "file_extension", "permissions"},
+			nil,
+		),
+
+		fileTypesCount: prometheus.NewDesc(
+			"squid_config_file_types_count",
+			"Count of files by extension type",
+			[]string{"extension"},
+			nil,
+		),
+
+		recentlyChanged: prometheus.NewDesc(
+			"squid_config_files_recently_changed",
+			"Number of files changed in the last hour",
+			nil,
+			nil,
+		),
+	}
+
+	return collector
+}
