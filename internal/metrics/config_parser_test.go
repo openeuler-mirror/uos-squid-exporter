@@ -116,3 +116,26 @@ refresh_pattern .               0       20%     4320
 		t.Errorf("Expected at least 5 ACLs, got %d", len(config.ACLs))
 	}
 }
+
+func TestSquidConfigParser_ParsePorts(t *testing.T) {
+	parser := &SquidConfigParser{}
+
+	// 测试单个端口
+	ports, err := parser.parsePorts("80")
+	if err != nil {
+		t.Fatalf("Failed to parse single port: %v", err)
+	}
+	if len(ports) != 1 || ports[0] != 80 {
+		t.Errorf("Expected port 80, got %v", ports)
+	}
+
+	// 测试端口范围
+	ports, err = parser.parsePorts("1025-1027")
+	if err != nil {
+		t.Fatalf("Failed to parse port range: %v", err)
+	}
+	expected := []int{1025, 1026, 1027}
+	if len(ports) != len(expected) {
+		t.Errorf("Expected ports %v, got %v", expected, ports)
+	}
+}
