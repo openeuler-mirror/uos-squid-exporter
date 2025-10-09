@@ -139,3 +139,39 @@ func TestSquidConfigParser_ParsePorts(t *testing.T) {
 		t.Errorf("Expected ports %v, got %v", expected, ports)
 	}
 }
+
+func TestSquidConfigData_Validate(t *testing.T) {
+	config := &SquidConfigData{
+		HttpPort:      3128,
+		LocalNetworks: []string{"192.168.0.0/16"},
+		SafePorts:     []int{80, 443},
+	}
+
+	err := config.Validate()
+	if err != nil {
+		t.Errorf("Valid config should not fail validation: %v", err)
+	}
+
+	// 测试无效端口
+	config.HttpPort = 0
+	err = config.Validate()
+	if err == nil {
+		t.Error("Invalid port should fail validation")
+	}
+
+	// 测试无本地网络
+	config.HttpPort = 3128
+	config.LocalNetworks = []string{}
+	err = config.Validate()
+	if err == nil {
+		t.Error("Empty local networks should fail validation")
+	}
+
+	// 测试无安全端口
+	config.LocalNetworks = []string{"192.168.0.0/16"}
+	config.SafePorts = []int{}
+	err = config.Validate()
+	if err == nil {
+		t.Error("Empty safe ports should fail validation")
+	}
+}
