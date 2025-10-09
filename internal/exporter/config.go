@@ -16,6 +16,7 @@ import (
 var (
 	Configfile      *string
 	SquidConfigPath *string
+	SquidConfigDir  *string
 	DefaultConfig   = Config{
 		Logging: logger.Config{
 			Level:   "debug",
@@ -26,6 +27,7 @@ var (
 		Port:            8080,
 		MetricsPath:     "/metrics",
 		SquidConfigPath: "/etc/squid/squid.conf",
+		SquidConfigDir:  "/etc/squid/",
 	}
 )
 
@@ -38,6 +40,10 @@ func init() {
 	SquidConfigPath = kingpin.Flag("squid-config", "Path to squid configuration file").
 		Default("/etc/squid/squid.conf").
 		String()
+
+	SquidConfigDir = kingpin.Flag("squid-config-dir", "Path to squid configuration directory").
+		Default("/etc/squid/").
+		String()
 }
 
 type Config struct {
@@ -46,6 +52,7 @@ type Config struct {
 	Port            int           `yaml:"port"`
 	MetricsPath     string        `yaml:"metricsPath"`
 	SquidConfigPath string        `yaml:"squidConfigPath"`
+	SquidConfigDir  string        `yaml:"squidConfigDir"`
 }
 
 func Unpack(config interface{}) error {
