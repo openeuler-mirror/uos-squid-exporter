@@ -88,3 +88,14 @@ func NewSquidConfigFilesCollector(configDir string) *SquidConfigFilesCollector {
 
 	return collector
 }
+
+// Describe 实现prometheus.Collector接口
+func (c *SquidConfigFilesCollector) Describe(ch chan<- *prometheus.Desc) {
+	c.filesCount.Describe(ch)
+	c.totalSize.Describe(ch)
+	c.lastScanTime.Describe(ch)
+	c.scanSuccess.Describe(ch)
+	ch <- c.fileInfo
+	ch <- c.fileTypesCount
+	ch <- c.recentlyChanged
+}
