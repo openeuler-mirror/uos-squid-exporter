@@ -1,4 +1,4 @@
-address: "127.0.0.1"
+address: "0.0.0.0"
 port: 9109
 metricsPath: "/metrics"
 log:
@@ -6,6 +6,7 @@ log:
   log_path: "/var/log/uos-exporter/squid-exporter.log"
 # Squid配置文件路径 - 用于监控squid配置文件的指标
 squidConfigPath: "/etc/squid/squid.conf"
+squidConfigDir: "/etc/squid/"
 squid:
   hostname: "localhost"
   port: 3128
