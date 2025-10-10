@@ -4,6 +4,7 @@ package metrics
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -69,4 +70,48 @@ func TestSquidConfigFilesCollector_ScanEmptyDirectory(t *testing.T) {
 	files, err := collector.scanConfigDirectory()
 	require.NoError(t, err)
 	assert.Empty(t, files, "空目录应返回空文件列表")
+}
+
+// 测试扫描包含文件的目录
+func TestSquidConfigFilesCollector_ScanDirectoryWithFiles(t *testing.T) {
+	// 创建临时目录
+	tmpDir, err := os.MkdirTemp("", "squid_config_test_files")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// 创建测试文件
+	testFiles := []struct {
+		name      string
+		content   string
+		extension string
+	}{
+		{"squid.conf", "http_port 3128\ncache_dir ufs /var/spool/squid 100 16 256", "conf"},
+		{"acl.conf", "acl localnet src 192.168.0.0/16", "conf"},
+		{"mime.conf", "text/html html htm", "conf"},
+		{"readme.txt", "Squid configuration files", "txt"},
+		{"backup.conf.bak", "backup file", "bak"},
+	}
+
+	for _, tf := range testFiles {
+		filePath := filepath.Join(tmpDir, tf.name)
+		err := os.WriteFile(filePath, []byte(tf.content), 0644)
+		require.NoError(t, err)
+	}
+
+	collector := NewSquidConfigFilesCollector(tmpDir)
+
+	files, err := collector.scanConfigDirectory()
+	require.NoError(t, err)
+	assert.Len(t, files, len(testFiles), "应找到所有测试文件")
+
+	// 验证文件信息
+	for _, file := range files {
+		assert.NotEmpty(t, file.Name, "文件名不应为空")
+		assert.NotEmpty(t, file.Path, "文件路径不应为空")
+		assert.False(t, file.IsDirectory, "文件不应是目录")
+		assert.True(t, file.IsRegular, "文件应是常规文件")
+		assert.NotZero(t, file.Size, "文件大小不应为零")
+		assert.NotZero(t, file.ModTime, "修改时间不应为零")
+		assert.NotEmpty(t, file.Permissions, "权限字符串不应为空")
+	}
 }
