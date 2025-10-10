@@ -375,6 +375,45 @@ func TestSquidConfigFilesCollector_FileTypesStatistics(t *testing.T) {
 	assert.Greater(t, extensionCounts["found"], 0, "应找到文件类型统计指标")
 }
 
+// 测试ConfigFileInfo结构体
+func TestConfigFileInfo_Structure(t *testing.T) {
+	// 创建临时文件
+	tmpFile, err := os.CreateTemp("", "test_file_info")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
+
+	content := "test content for file info"
+	_, err = tmpFile.WriteString(content)
+	require.NoError(t, err)
+	tmpFile.Close()
+
+	// 获取文件信息
+	fileInfo, err := os.Stat(tmpFile.Name())
+	require.NoError(t, err)
+
+	// 创建ConfigFileInfo
+	configFileInfo := ConfigFileInfo{
+		Name:        fileInfo.Name(),
+		Path:        tmpFile.Name(),
+		Size:        fileInfo.Size(),
+		ModTime:     fileInfo.ModTime(),
+		IsDirectory: fileInfo.IsDir(),
+		IsRegular:   fileInfo.Mode().IsRegular(),
+		Permissions: fileInfo.Mode().String(),
+		Extension:   "tmp",
+	}
+
+	// 验证字段
+	assert.Equal(t, fileInfo.Name(), configFileInfo.Name, "文件名应匹配")
+	assert.Equal(t, tmpFile.Name(), configFileInfo.Path, "文件路径应匹配")
+	assert.Equal(t, fileInfo.Size(), configFileInfo.Size, "文件大小应匹配")
+	assert.Equal(t, fileInfo.ModTime(), configFileInfo.ModTime, "修改时间应匹配")
+	assert.False(t, configFileInfo.IsDirectory, "不应是目录")
+	assert.True(t, configFileInfo.IsRegular, "应是常规文件")
+	assert.NotEmpty(t, configFileInfo.Permissions, "权限字符串不应为空")
+	assert.Equal(t, "tmp", configFileInfo.Extension, "扩展名应匹配")
+}
+
 // 检查字符串是否包含子串
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[0:len(substr)] == substr || contains(s[1:], substr)))
