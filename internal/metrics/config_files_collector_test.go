@@ -273,6 +273,57 @@ func TestSquidConfigFilesCollector_CollectSuccess(t *testing.T) {
 	assert.NotNil(t, scanSuccessMetric, "应收集到扫描成功指标")
 }
 
+// 测试最近修改的文件检测
+func TestSquidConfigFilesCollector_RecentlyChangedFiles(t *testing.T) {
+	// 创建临时目录
+	tmpDir, err := os.MkdirTemp("", "squid_config_test_recent")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// 创建旧文件（修改时间超过1小时）
+	oldFile := filepath.Join(tmpDir, "old.conf")
+	err = os.WriteFile(oldFile, []byte("old content"), 0644)
+	require.NoError(t, err)
+
+	// 修改文件时间为1小时前
+	oldTime := time.Now().Add(-2 * time.Hour)
+	err = os.Chtimes(oldFile, oldTime, oldTime)
+	require.NoError(t, err)
+
+	// 创建新文件（修改时间在1小时内）
+	newFile := filepath.Join(tmpDir, "new.conf")
+	err = os.WriteFile(newFile, []byte("new content"), 0644)
+	require.NoError(t, err)
+
+	collector := NewSquidConfigFilesCollector(tmpDir)
+
+	ch := make(chan prometheus.Metric, 50)
+	collector.Collect(ch)
+
+	// 收集所有指标
+	var metrics []prometheus.Metric
+	for i := 0; i < 50; i++ {
+		select {
+		case metric := <-ch:
+			metrics = append(metrics, metric)
+		case <-time.After(100 * time.Millisecond):
+			break
+		}
+	}
+
+	// 验证最近修改文件数量指标
+	var recentlyChangedMetric prometheus.Metric
+	for _, metric := range metrics {
+		desc := metric.Desc()
+		if contains(desc.String(), "squid_config_files_recently_changed") {
+			recentlyChangedMetric = metric
+			break
+		}
+	}
+
+	assert.NotNil(t, recentlyChangedMetric, "应收集到最近修改文件指标")
+}
+
 // 检查字符串是否包含子串
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[0:len(substr)] == substr || contains(s[1:], substr)))
