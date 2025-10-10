@@ -115,3 +115,53 @@ func TestSquidConfigFilesCollector_ScanDirectoryWithFiles(t *testing.T) {
 		assert.NotEmpty(t, file.Permissions, "权限字符串不应为空")
 	}
 }
+
+// 测试扫描包含子目录的目录
+func TestSquidConfigFilesCollector_ScanDirectoryWithSubdirectories(t *testing.T) {
+	// 创建临时目录
+	tmpDir, err := os.MkdirTemp("", "squid_config_test_subdirs")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// 创建子目录
+	subDir := filepath.Join(tmpDir, "conf.d")
+	err = os.Mkdir(subDir, 0755)
+	require.NoError(t, err)
+
+	// 在子目录中创建文件
+	filePath := filepath.Join(subDir, "extra.conf")
+	err = os.WriteFile(filePath, []byte("acl extra src 10.0.0.0/8"), 0644)
+	require.NoError(t, err)
+
+	collector := NewSquidConfigFilesCollector(tmpDir)
+
+	files, err := collector.scanConfigDirectory()
+	require.NoError(t, err)
+	assert.Len(t, files, 2, "应找到子目录和文件") // 子目录本身和其中的文件
+
+	// 验证子目录信息
+	var foundSubDir bool
+	var foundFile bool
+	for _, file := range files {
+		if file.IsDirectory {
+			foundSubDir = true
+			assert.Equal(t, "conf.d", file.Name, "子目录名应匹配")
+		} else {
+			foundFile = true
+			assert.Equal(t, "extra.conf", file.Name, "文件名应匹配")
+		}
+	}
+
+	assert.True(t, foundSubDir, "应找到子目录")
+	assert.True(t, foundFile, "应找到文件")
+}
+
+// 测试扫描不存在的目录
+// func TestSquidConfigFilesCollector_ScanNonExistentDirectory(t *testing.T) {
+// 	nonExistentDir := "/this/path/does/not/exist/12345"
+// 	collector := NewSquidConfigFilesCollector(nonExistentDir)
+
+// 	files, err := collector.scanConfigDirectory()
+// 	assert.NoError(t, err, "扫描不存在的目录不应返回错误")
+// 	assert.Empty(t, files, "不存在的目录应返回空文件列表")
+// }
