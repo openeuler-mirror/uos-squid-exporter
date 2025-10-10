@@ -207,3 +207,73 @@ func TestSquidConfigFilesCollector_FileExtensionExtraction(t *testing.T) {
 		assert.Equal(t, tc.extension, actualExtension, "文件 %s 的扩展名应匹配", tc.filename)
 	}
 }
+
+// 测试收集方法 - 成功情况
+func TestSquidConfigFilesCollector_CollectSuccess(t *testing.T) {
+	// 创建临时目录
+	tmpDir, err := os.MkdirTemp("", "squid_config_test_collect")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// 创建测试文件
+	testFiles := []struct {
+		name    string
+		content string
+		size    int
+	}{
+		{"config1.conf", "content1", len("content1")},
+		{"config2.conf", "content2", len("content2")},
+		{"readme.txt", "readme content", len("readme content")},
+	}
+
+	totalSize := 0
+	for _, tf := range testFiles {
+		filePath := filepath.Join(tmpDir, tf.name)
+		err := os.WriteFile(filePath, []byte(tf.content), 0644)
+		require.NoError(t, err)
+		totalSize += tf.size
+	}
+
+	collector := NewSquidConfigFilesCollector(tmpDir)
+
+	ch := make(chan prometheus.Metric, 100)
+	collector.Collect(ch)
+
+	// 收集所有指标
+	var metrics []prometheus.Metric
+	for i := 0; i < 100; i++ {
+		select {
+		case metric := <-ch:
+			metrics = append(metrics, metric)
+		case <-time.After(100 * time.Millisecond):
+			break
+		}
+	}
+
+	// 验证收集到了指标
+	assert.NotEmpty(t, metrics, "应收集到指标")
+
+	// 验证基础指标
+	var filesCountMetric, totalSizeMetric, scanSuccessMetric prometheus.Metric
+	for _, metric := range metrics {
+		desc := metric.Desc()
+		descString := desc.String()
+
+		if contains(descString, "squid_config_files_count") {
+			filesCountMetric = metric
+		} else if contains(descString, "squid_config_files_total_size_bytes") {
+			totalSizeMetric = metric
+		} else if contains(descString, "squid_config_scan_success") {
+			scanSuccessMetric = metric
+		}
+	}
+
+	assert.NotNil(t, filesCountMetric, "应收集到文件计数指标")
+	assert.NotNil(t, totalSizeMetric, "应收集到总大小指标")
+	assert.NotNil(t, scanSuccessMetric, "应收集到扫描成功指标")
+}
+
+// 检查字符串是否包含子串
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[0:len(substr)] == substr || contains(s[1:], substr)))
+}
