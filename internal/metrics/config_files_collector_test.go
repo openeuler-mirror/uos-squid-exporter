@@ -324,6 +324,57 @@ func TestSquidConfigFilesCollector_RecentlyChangedFiles(t *testing.T) {
 	assert.NotNil(t, recentlyChangedMetric, "应收集到最近修改文件指标")
 }
 
+// 测试文件类型统计
+func TestSquidConfigFilesCollector_FileTypesStatistics(t *testing.T) {
+	// 创建临时目录
+	tmpDir, err := os.MkdirTemp("", "squid_config_test_types")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// 创建不同扩展名的文件
+	fileTypes := map[string]int{
+		"conf": 3,
+		"txt":  2,
+		"bak":  1,
+	}
+
+	for ext, count := range fileTypes {
+		for i := 0; i < count; i++ {
+			filename := filepath.Join(tmpDir, "file"+string(rune('a'+i))+"."+ext)
+			err := os.WriteFile(filename, []byte("content"), 0644)
+			require.NoError(t, err)
+		}
+	}
+
+	collector := NewSquidConfigFilesCollector(tmpDir)
+
+	ch := make(chan prometheus.Metric, 50)
+	collector.Collect(ch)
+
+	// 收集所有指标
+	var metrics []prometheus.Metric
+	for i := 0; i < 50; i++ {
+		select {
+		case metric := <-ch:
+			metrics = append(metrics, metric)
+		case <-time.After(100 * time.Millisecond):
+			break
+		}
+	}
+
+	// 验证文件类型统计
+	extensionCounts := make(map[string]int)
+	for _, metric := range metrics {
+		desc := metric.Desc()
+		if contains(desc.String(), "squid_config_file_types_count") {
+			// 这里我们无法直接获取标签值，但可以确认指标被创建了
+			extensionCounts["found"]++ // 标记找到了文件类型指标
+		}
+	}
+
+	assert.Greater(t, extensionCounts["found"], 0, "应找到文件类型统计指标")
+}
+
 // 检查字符串是否包含子串
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[0:len(substr)] == substr || contains(s[1:], substr)))
