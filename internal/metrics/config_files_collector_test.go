@@ -165,3 +165,45 @@ func TestSquidConfigFilesCollector_ScanDirectoryWithSubdirectories(t *testing.T)
 // 	assert.NoError(t, err, "扫描不存在的目录不应返回错误")
 // 	assert.Empty(t, files, "不存在的目录应返回空文件列表")
 // }
+
+// 测试文件扩展名提取
+func TestSquidConfigFilesCollector_FileExtensionExtraction(t *testing.T) {
+	// 创建临时目录
+	tmpDir, err := os.MkdirTemp("", "squid_config_test_extensions")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testCases := []struct {
+		filename  string
+		extension string
+	}{
+		{"squid.conf", "conf"},
+		{"acl.txt", "txt"},
+		{"mime", ""},               // 无扩展名
+		{"backup.conf.bak", "bak"}, // 多个点，取最后一个
+		{".hidden", "hidden"},      // 隐藏文件
+	}
+
+	for _, tc := range testCases {
+		filePath := filepath.Join(tmpDir, tc.filename)
+		err := os.WriteFile(filePath, []byte("test content"), 0644)
+		require.NoError(t, err)
+	}
+
+	collector := NewSquidConfigFilesCollector(tmpDir)
+
+	files, err := collector.scanConfigDirectory()
+	require.NoError(t, err)
+
+	// 创建扩展名映射以便验证
+	extensionMap := make(map[string]string)
+	for _, file := range files {
+		extensionMap[file.Name] = file.Extension
+	}
+
+	for _, tc := range testCases {
+		actualExtension, exists := extensionMap[tc.filename]
+		assert.True(t, exists, "应找到文件: %s", tc.filename)
+		assert.Equal(t, tc.extension, actualExtension, "文件 %s 的扩展名应匹配", tc.filename)
+	}
+}
