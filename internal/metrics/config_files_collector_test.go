@@ -3,11 +3,13 @@
 package metrics
 
 import (
+	"os"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // 测试创建新的配置收集器
@@ -53,4 +55,18 @@ func TestSquidConfigFilesCollector_Describe(t *testing.T) {
 	}
 
 	assert.GreaterOrEqual(t, len(descs), 7, "应至少描述7个指标")
+}
+
+// 测试扫描空目录
+func TestSquidConfigFilesCollector_ScanEmptyDirectory(t *testing.T) {
+	// 创建临时目录
+	tmpDir, err := os.MkdirTemp("", "squid_config_test_empty")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	collector := NewSquidConfigFilesCollector(tmpDir)
+
+	files, err := collector.scanConfigDirectory()
+	require.NoError(t, err)
+	assert.Empty(t, files, "空目录应返回空文件列表")
 }
