@@ -4,7 +4,9 @@ package metrics
 
 import (
 	"testing"
+	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,4 +32,25 @@ func TestSquidConfigFilesCollector_GetConfigDir(t *testing.T) {
 	collector := NewSquidConfigFilesCollector(configDir)
 
 	assert.Equal(t, configDir, collector.GetConfigDir(), "配置目录应匹配")
+}
+
+// 测试描述方法
+func TestSquidConfigFilesCollector_Describe(t *testing.T) {
+	collector := NewSquidConfigFilesCollector("/tmp")
+
+	ch := make(chan *prometheus.Desc, 10)
+	collector.Describe(ch)
+
+	// 收集所有描述
+	var descs []*prometheus.Desc
+	for i := 0; i < 7; i++ {
+		select {
+		case desc := <-ch:
+			descs = append(descs, desc)
+		case <-time.After(100 * time.Millisecond):
+			break
+		}
+	}
+
+	assert.GreaterOrEqual(t, len(descs), 7, "应至少描述7个指标")
 }
